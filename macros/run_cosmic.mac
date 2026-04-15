@@ -1,0 +1,23 @@
+# ==============================================================================
+# [Background Run] CRY Cosmic Ray Pure Generation
+# ==============================================================================
+/run/numberOfThreads 16
+
+/run/initialize
+
+# DAQ 파라미터 세팅 (시그널 런과 동일하게 유지)
+/myApp/daq/setThreshold 5 
+/myApp/daq/setCoinWindow 100 ns
+/myApp/daq/setPileUpWindow 50 ns
+/myApp/detector/setMovableAngle 30 deg
+
+# ==============================================================================
+# ★ 핵심: 소스 타입을 0 (Cosmic)으로 설정하고 단독 파일로 저장
+# (이 모드에서는 GPS 코발트 붕괴가 자동으로 무시됩니다)
+# ==============================================================================
+/myApp/daq/setSourceType 0
+/analysis/setFileName Cosmic_Only.root
+
+/run/printProgress 100000
+# 통계량 확보를 위해 100만 개 발사!
+/run/beamOn 1000000

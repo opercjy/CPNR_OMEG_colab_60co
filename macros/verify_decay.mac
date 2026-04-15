@@ -1,0 +1,16 @@
+/run/numberOfThreads 1
+/run/initialize
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+9 y
+
+/gps/particle ion
+/gps/ion 27 60 0 0
+/gps/energy 0. keV
+/gps/pos/type Point
+/gps/pos/centre 0. 0. 0. cm
+/gps/ang/type iso
+
+# ★ 핵심: 입자 생성 및 이동 경로를 터미널에 중계하라는 명령
+/tracking/verbose 1
+
+# 딱 10번만 쏴서 화면 로그를 읽어봅니다.
+/run/beamOn 10

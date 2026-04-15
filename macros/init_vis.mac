@@ -1,0 +1,18 @@
+/run/initialize
+
+# OpenGL 창 열기
+/vis/open OGL 800x600-0+0
+/vis/drawVolume
+
+# 차폐체를 와이어프레임으로 설정 (내부가 보이게 함)
+/vis/viewer/set/style wireframe
+/vis/viewer/set/hiddenEdge true
+
+# 뷰포인트 및 필터링
+/vis/viewer/set/viewpointThetaPhi 90. 0.
+/vis/filtering/trajectories/create/particleFilter
+/vis/filtering/trajectories/particleFilter-0/add opticalphoton
+/vis/filtering/trajectories/particleFilter-0/invert true
+
+/vis/scene/add/trajectories smooth
+/vis/scene/endOfEventAction accumulate

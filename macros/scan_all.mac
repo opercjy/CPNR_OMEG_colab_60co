@@ -1,0 +1,29 @@
+# ==============================================================================
+# Co-60 Angular Correlation & Cosmic Ray Auto Scan Macro
+# ==============================================================================
+/run/numberOfThreads 16
+
+/run/initialize
+# ==============================================================================
+# ★ [초중요] 반감기가 긴 동위원소(Co-60)가 붕괴하지 않는 Geant4 기본 제약 해제
+# ==============================================================================
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+9 y
+
+
+# 선원 설정 (Co-60 정지 붕괴)
+/gps/particle ion
+/gps/ion 27 60 0 0
+/gps/energy 0. keV
+/gps/pos/type Point
+/gps/pos/centre 0. 0. 0. cm
+/gps/ang/type iso
+
+# DAQ 파라미터 세팅 (단위를 MeV로 주면 PMT 광전자(PE) 개수로 작동함. 50 MeV = 50 PE)
+/myApp/daq/setThreshold 50 MeV
+/myApp/daq/setCoinWindow 100 ns
+/myApp/daq/setPileUpWindow 50 ns
+
+/run/printProgress 10000
+
+# 30도부터 180도까지 10도 간격으로 루프 스캔!
+/control/loop macros/run_single.mac angle 30 180 10

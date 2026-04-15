@@ -1,0 +1,30 @@
+# ==============================================================================
+# 단일 각도(45도) 검증 테스트용 매크로
+# ==============================================================================
+# 1. 코어 수 설정 (초기화 전)
+/run/numberOfThreads 16
+
+# 2. ★ 핵심: 물리 엔진 및 지오메트리를 먼저 메모리에 올립니다.
+/run/initialize
+
+# 3. ★ 방사성 붕괴 제약 해제 (초기화 이후에 배치해야 명령어 에러가 안 납니다!)
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+9 y
+
+# 4. 선원 설정 (Co-60 정지 붕괴)
+/gps/particle ion
+/gps/ion 27 60 0 0
+/gps/energy 0. keV
+/gps/pos/type Point
+/gps/pos/centre 0. 0. 0. cm
+/gps/ang/type iso
+
+# 5. DAQ 파라미터 세팅
+/myApp/daq/setThreshold 50 MeV
+/myApp/daq/setCoinWindow 100 ns
+/myApp/daq/setPileUpWindow 50 ns
+
+/run/printProgress 10000
+
+# 6. 임의의 변수(angle)에 45를 넣은 뒤 단일 실행
+/control/alias angle 45
+/control/execute macros/run_single.mac

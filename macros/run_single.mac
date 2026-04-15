@@ -1,0 +1,16 @@
+/control/echo " "
+/control/echo "========================================================="
+/control/echo "=== Running Coincidence Simulation for Angle: {angle} deg ==="
+/control/echo "========================================================="
+
+# 1. 파일 이름 동적 할당
+/analysis/setFileName Co60_Angle_{angle}.root
+
+# 2. 이동형 검출기 기하학적 각도 설정
+/myApp/detector/setMovableAngle {angle} deg
+
+# 3. ★ DAQ Ntuple에 현재 각도 태그 달아주기
+/myApp/daq/setCurrentAngle {angle} deg
+
+# 4. 이벤트 실행
+/run/beamOn 100000

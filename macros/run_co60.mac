@@ -1,0 +1,33 @@
+# ==============================================================================
+# [Signal Run] Co-60 Pure Cascade Generation
+# ==============================================================================
+/run/numberOfThreads 16
+
+# 1. 물리 엔진 초기화가 '무조건' 먼저입니다!
+/run/initialize
+
+# 2. ★ 초기화 직후에 Co-60 붕괴 활성화 명령을 내립니다!
+/process/had/rdm/thresholdForVeryLongDecayTime 1.0e+9 y
+
+# 선원 설정 (Co-60 정지 붕괴)
+/gps/particle ion
+/gps/ion 27 60 0 0
+/gps/energy 0. keV
+/gps/pos/type Point
+/gps/pos/centre 0. 0. 0. cm
+/gps/ang/type iso
+
+# DAQ 파라미터 세팅 (50 PE 트리거)
+/myApp/daq/setThreshold 5 
+/myApp/daq/setCoinWindow 100 ns
+/myApp/daq/setPileUpWindow 50 ns
+
+# 검출기 180도 배치
+/myApp/detector/setMovableAngle 30 deg
+
+# 소스 타입을 1 (Co-60)로 설정하고 저장
+/myApp/daq/setSourceType 1
+/analysis/setFileName Co60_Only.root
+
+/run/printProgress 100000
+/run/beamOn 1000000
