@@ -10,6 +10,7 @@
 -----
 
 ## 1\. Overview & Design Philosophy (설계 철학 및 당위성)
+<img width="1293" height="982" alt="image" src="https://github.com/user-attachments/assets/ab40de54-c63d-4b0c-9dda-d91380fab5b7" />
 
 본 시스템은 초저방사능(Ultra-low Background) 실험의 성능 한계를 극복하기 위해, 일반적인 시뮬레이션 예제 수준을 벗어난 고도의 아키텍처가 적용되었습니다. 초보 연구원 및 동료들을 위해 본 시스템에 적용된 \*\*기술적 당위성(Why we do this)\*\*을 먼저 브리핑합니다.
 
