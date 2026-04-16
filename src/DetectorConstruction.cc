@@ -183,23 +183,36 @@ G4LogicalVolume* DetectorConstruction::ConstructDetectorUnit() {
     // =========================================================================
     // ★ 3층 적층 하우징(PETG) 및 측면 연납(Pb) 차폐
     // =========================================================================
-    auto logicPetgSide = new G4LogicalVolume(new G4Tubs("PetgSide", 27.3*mm, 30.0*mm, 18.4*mm, 0, 360*deg), petg, "PetgSide");
+ 
+    // 1. 측면 PETG (두께 10mm 확보, Z: -14.8 ~ +17.6)
+    // 외경을 30.0mm에서 37.3mm로 확장했습니다.
+    auto logicPetgSide = new G4LogicalVolume(
+        new G4Tubs("PetgSide", 27.3*mm, 37.3*mm, 16.2*mm, 0, 360*deg), petg, "PetgSide");
     logicPetgSide->SetVisAttributes(new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.5)));
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,1.6*mm), logicPetgSide, "PhysPetgSide", logicUnit, false, 0);
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0, 1.4*mm), logicPetgSide, "PhysPetgSide", logicUnit, false, 0);
 
-    auto logicPetgFront = new G4LogicalVolume(new G4Tubs("PetgFront", 0, 30.0*mm, 1.0*mm, 0, 360*deg), petg, "PetgFront");
+    // 2. 전면 PETG 덮개 (두께 10mm, Z: -24.8 ~ -14.8)
+    // 반지름을 측면 외경과 일치시켜 단차 없는 원통형 캡슐 구조를 만듭니다.
+    auto logicPetgFront = new G4LogicalVolume(
+        new G4Tubs("PetgFront", 0, 37.3*mm, 5.0*mm, 0, 360*deg), petg, "PetgFront");
     logicPetgFront->SetVisAttributes(new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.8)));
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,-15.8*mm), logicPetgFront, "PhysPetgFront", logicUnit, false, 0);
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0,-19.8*mm), logicPetgFront, "PhysPetgFront", logicUnit, false, 0);
 
-    auto logicPetgBack = new G4LogicalVolume(new G4Tubs("PetgBack", 0, 30.0*mm, 1.2*mm, 0, 360*deg), petg, "PetgBack");
+    // 3. 후면 PETG 덮개 (Z: +17.6 ~ +20.0)
+    auto logicPetgBack = new G4LogicalVolume(
+        new G4Tubs("PetgBack", 0, 37.3*mm, 1.2*mm, 0, 360*deg), petg, "PetgBack");
     logicPetgBack->SetVisAttributes(new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.8)));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0, 18.8*mm), logicPetgBack, "PhysPetgBack", logicUnit, false, 0);
 
-    auto logicPbSide = new G4LogicalVolume(new G4Tubs("PbSide", 30.0*mm, 35.0*mm, 18.4*mm, 0, 360*deg), pb, "PbSide");
-    G4VisAttributes* visPb = new G4VisAttributes(G4Colour(0.4, 0.4, 0.4, 0.5)); visPb->SetForceWireframe(true);
+    // 4. 측면 연납(Pb) 차폐 (두께 5mm, Z: -24.8 ~ +20.0)
+    // PETG 외경이 늘어남에 따라 납의 시작 반지름(내경)을 37.3mm로 밀어냈습니다.
+    auto logicPbSide = new G4LogicalVolume(
+        new G4Tubs("PbSide", 37.3*mm, 42.3*mm, 22.4*mm, 0, 360*deg), pb, "PbSide");
+    G4VisAttributes* visPb = new G4VisAttributes(G4Colour(0.4, 0.4, 0.4, 0.5)); 
+    visPb->SetForceWireframe(true); // 내부 구조 관찰을 위한 와이어프레임 설정
     logicPbSide->SetVisAttributes(visPb);
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,1.6*mm), logicPbSide, "PhysPbSide", logicUnit, false, 0);
-
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0,-2.4*mm), logicPbSide, "PhysPbSide", logicUnit, false, 0);
+ 
     // =========================================================================
     // ★ 광학 표면 (Optical Surfaces) 복구
     // =========================================================================
