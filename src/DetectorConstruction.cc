@@ -44,7 +44,6 @@ void DetectorConstruction::SetFrontDistance(G4double dist) {
 }
 
 void DetectorConstruction::UpdateDetectorPosition() {
-    // PETG 전면 표면(Z = -24.8mm) 기준 거리 보정
     G4double rCenter = fFrontDistance + 24.8 * mm;
 
     if (fFixedPhys) {
@@ -64,11 +63,11 @@ void DetectorConstruction::UpdateDetectorPosition() {
 
 G4VPhysicalVolume* DetectorConstruction::Construct() {
     G4NistManager* nist = G4NistManager::Instance();
-    
-    // --- 물질 및 광학 속성 정의 ---
-    G4Material* air = nist->FindOrBuildMaterial("G4_AIR");
+    G4bool check = true;
+
+    G4Material* air  = nist->FindOrBuildMaterial("G4_AIR");
     G4Material* co60 = nist->FindOrBuildMaterial("G4_Co");
-    
+
     std::vector<G4double> optEn = {2.0*eV, 2.5*eV, 3.1*eV, 3.5*eV, 4.1*eV};
 
     G4Material* lsMat = new G4Material("LS_Material", 0.86*g/cm3, 2);
@@ -76,36 +75,33 @@ G4VPhysicalVolume* DetectorConstruction::Construct() {
     lsMat->AddElement(nist->FindOrBuildElement("H"), 30);
     
     G4MaterialPropertiesTable* mptLS = new G4MaterialPropertiesTable();
-    mptLS->AddProperty("RINDEX", optEn, {1.49, 1.49, 1.49, 1.49, 1.49});
-    mptLS->AddProperty("ABSLENGTH", optEn, {15.*m, 15.*m, 12.*m, 5.*m, 1.*m});
-    mptLS->AddProperty("SCINTILLATIONCOMPONENT1", optEn, {0.01, 0.20, 1.00, 0.40, 0.01});
+    mptLS->AddProperty("RINDEX", optEn, std::vector<G4double>{1.49, 1.49, 1.49, 1.49, 1.49});
+    mptLS->AddProperty("ABSLENGTH", optEn, std::vector<G4double>{15.*m, 15.*m, 12.*m, 5.*m, 1.*m});
+    mptLS->AddProperty("SCINTILLATIONCOMPONENT1", optEn, std::vector<G4double>{0.01, 0.20, 1.00, 0.40, 0.01});
     mptLS->AddConstProperty("SCINTILLATIONYIELD", 10000./MeV);
     mptLS->AddConstProperty("RESOLUTIONSCALE", 1.0);
     mptLS->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 4.5*ns);
     lsMat->SetMaterialPropertiesTable(mptLS);
 
-    // World
     auto logicWorld = new G4LogicalVolume(new G4Box("World", 1*m, 1*m, 1*m), air, "World");
-    auto physWorld  = new G4PVPlacement(nullptr, G4ThreeVector(), logicWorld, "World", nullptr, false, 0);
+    auto physWorld  = new G4PVPlacement(nullptr, G4ThreeVector(), logicWorld, "World", nullptr, false, 0, check);
     logicWorld->SetVisAttributes(G4VisAttributes::GetInvisible());
 
-    // Source (Co-60)
     auto logicSource = new G4LogicalVolume(new G4Tubs("Source", 0, 2.5*mm, 0.25*mm, 0, 360*deg), co60, "Source");
     logicSource->SetVisAttributes(new G4VisAttributes(G4Colour::Blue()));
     auto rotSrc = new G4RotationMatrix(); rotSrc->rotateX(90.*deg);
-    new G4PVPlacement(rotSrc, G4ThreeVector(), logicSource, "PhysSource", logicWorld, false, 0);
+    new G4PVPlacement(rotSrc, G4ThreeVector(), logicSource, "PhysSource", logicWorld, false, 0, check);
 
-    // Detector 배치
     G4LogicalVolume* logicUnit = ConstructDetectorUnit();
     G4double rCenter = fFrontDistance + 24.8 * mm;
 
     G4ThreeVector zAxis0(1., 0., 0.), yAxis0(0., 1., 0.);
     auto rot0 = new G4RotationMatrix(yAxis0.cross(zAxis0).unit(), yAxis0, zAxis0); rot0->invert();
-    fFixedPhys = new G4PVPlacement(rot0, rCenter * zAxis0, logicUnit, "DetectorUnit_0", logicWorld, false, 0);
+    fFixedPhys = new G4PVPlacement(rot0, rCenter * zAxis0, logicUnit, "DetectorUnit_0", logicWorld, false, 0, check);
 
     G4ThreeVector zAxis1(std::cos(fMovablePMTAngle), 0., std::sin(fMovablePMTAngle));
     fMovableRot = new G4RotationMatrix(yAxis0.cross(zAxis1).unit(), yAxis0, zAxis1); fMovableRot->invert();
-    fMovablePhys = new G4PVPlacement(fMovableRot, rCenter * zAxis1, logicUnit, "DetectorUnit_1", logicWorld, false, 1);
+    fMovablePhys = new G4PVPlacement(fMovableRot, rCenter * zAxis1, logicUnit, "DetectorUnit_1", logicWorld, false, 1, check);
 
     return physWorld;
 }
@@ -118,36 +114,51 @@ G4LogicalVolume* DetectorConstruction::ConstructDetectorUnit() {
     G4Material* al     = nist->FindOrBuildMaterial("G4_Al");
     G4Material* petg   = nist->FindOrBuildMaterial("G4_POLYCARBONATE");
     G4Material* pb     = nist->FindOrBuildMaterial("G4_Pb");
-    G4Material* grease = nist->FindOrBuildMaterial("G4_AIR"); // Grease 대용
 
-    // Unit Container (겹침 방지)
+    G4Material* grease = new G4Material("Grease", 1.0*g/cm3, 2);
+    grease->AddElement(nist->FindOrBuildElement("C"), 1);
+    grease->AddElement(nist->FindOrBuildElement("H"), 2);
+
+    // ★ 복구된 영역: 광학 에너지 스펙트럼 및 유리/그리스 물리 속성 정의
+    std::vector<G4double> optEn = {2.0*eV, 2.5*eV, 3.1*eV, 3.5*eV, 4.1*eV};
+    std::vector<G4double> rIndexGlass = {1.47, 1.47, 1.47, 1.47, 1.47};
+    std::vector<G4double> absGlass = {10.*m, 10.*m, 10.*m, 10.*m, 10.*m};
+
+    G4MaterialPropertiesTable* mptGlass = new G4MaterialPropertiesTable();
+    mptGlass->AddProperty("RINDEX", optEn, rIndexGlass);
+    mptGlass->AddProperty("ABSLENGTH", optEn, absGlass);
+    glass->SetMaterialPropertiesTable(mptGlass);
+    grease->SetMaterialPropertiesTable(mptGlass); // 굴절률 매칭을 위해 같은 속성 부여
+
     auto logicUnit = new G4LogicalVolume(new G4Tubs("Unit", 0, 50.0*mm, 30.0*mm, 0, 360*deg), vacuum, "LogicUnit");
     logicUnit->SetVisAttributes(G4VisAttributes::GetInvisible());
 
-    // 정밀 치수
-    G4double r_ls    = 25.0*mm;   // LS 반지름
-    G4double r_duran = 27.0*mm;   // 듀란병 외경
-    G4double r_tyvek = 27.2*mm;   // 타이벡 외경
-    G4double r_al    = 27.3*mm;   // 알루미늄 외경
-    G4double r_petg  = 37.3*mm;   // PETG 하우징 외경
-    G4double r_pb    = 42.3*mm;   // Pb 측면 외경
+    G4double r_ls    = 25.0*mm;
+    G4double r_duran = 27.0*mm;
+    G4double r_tyvek = 27.2*mm;
+    G4double r_al    = 27.3*mm;
+    G4double r_petg  = 37.3*mm;
+    G4double r_pb    = 42.3*mm;
 
-    // 1. LS
     auto logicLS = new G4LogicalVolume(new G4Tubs("LS", 0, r_ls, 12.5*mm, 0, 360*deg), G4Material::GetMaterial("LS_Material"), "LS");
     logicLS->SetVisAttributes(new G4VisAttributes(G4Colour::Red()));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicLS, "PhysLS", logicUnit, false, 0);
 
-    // 2. 듀란병 (측면 2mm, 전/후면 2mm)
-    auto logicDuranSide = new G4LogicalVolume(new G4Tubs("DuranSide", r_ls, r_duran, 14.5*mm, 0, 360*deg), glass, "DuranSide");
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicDuranSide, "PhysDuranSide", logicUnit, false, 0);
-
     auto logicDuranFront = new G4LogicalVolume(new G4Tubs("DuranFront", 0, r_ls, 1.0*mm, 0, 360*deg), glass, "DuranFront");
+    logicDuranFront->SetVisAttributes(new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.2)));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0, -13.5*mm), logicDuranFront, "PhysDuranFront", logicUnit, false, 0);
 
     auto logicDuranBack = new G4LogicalVolume(new G4Tubs("DuranBack", 0, r_ls, 1.0*mm, 0, 360*deg), glass, "DuranBack");
+    logicDuranBack->SetVisAttributes(new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.2)));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0, 13.5*mm), logicDuranBack, "PhysDuranBack", logicUnit, false, 0);
 
-    // 3. PMT 창 및 광음극
+    auto logicDuranSide = new G4LogicalVolume(new G4Tubs("DuranSide", r_ls, r_duran, 14.5*mm, 0, 360*deg), glass, "DuranSide");
+    logicDuranSide->SetVisAttributes(new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.2)));
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicDuranSide, "PhysDuranSide", logicUnit, false, 0);
+
+    auto logicGrease = new G4LogicalVolume(new G4Tubs("Grease", 0, r_ls, 0.5*mm, 0, 360*deg), grease, "Grease");
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0, 15.0*mm), logicGrease, "PhysGrease", logicUnit, false, 0);
+
     auto logicWin = new G4LogicalVolume(new G4Tubs("Win", 0, r_ls, 1.0*mm, 0, 360*deg), glass, "Win");
     new G4PVPlacement(nullptr, G4ThreeVector(0,0, 16.5*mm), logicWin, "PhysWin", logicUnit, false, 0);
 
@@ -155,45 +166,54 @@ G4LogicalVolume* DetectorConstruction::ConstructDetectorUnit() {
     logicCat->SetVisAttributes(new G4VisAttributes(G4Colour::Yellow()));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0, 17.55*mm), logicCat, "PhysCat", logicUnit, false, 0);
 
-    // 4. 타이벡 (0.2mm)
-    auto logicTyvekSide = new G4LogicalVolume(new G4Tubs("TyvekSide", r_duran, r_tyvek, 14.5*mm, 0, 360*deg), tyvek, "TyvekSide");
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicTyvekSide, "PhysTyvekSide", logicUnit, false, 0);
-
     auto logicTyvekFront = new G4LogicalVolume(new G4Tubs("TyvekFront", 0, r_tyvek, 0.1*mm, 0, 360*deg), tyvek, "TyvekFront");
     new G4PVPlacement(nullptr, G4ThreeVector(0,0,-14.6*mm), logicTyvekFront, "PhysTyvekFront", logicUnit, false, 0);
 
-    // 5. 알루미늄 (0.1mm)
-    auto logicAlSide = new G4LogicalVolume(new G4Tubs("AlSide", r_tyvek, r_al, 14.6*mm, 0, 360*deg), al, "AlSide");
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,-0.1*mm), logicAlSide, "PhysAlSide", logicUnit, false, 0);
+    auto logicTyvekSide = new G4LogicalVolume(new G4Tubs("TyvekSide", r_duran, r_tyvek, 14.5*mm, 0, 360*deg), tyvek, "TyvekSide");
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0, 0.0*mm), logicTyvekSide, "PhysTyvekSide", logicUnit, false, 0);
 
     auto logicAlFront = new G4LogicalVolume(new G4Tubs("AlFront", 0, r_al, 0.05*mm, 0, 360*deg), al, "AlFront");
     new G4PVPlacement(nullptr, G4ThreeVector(0,0,-14.75*mm), logicAlFront, "PhysAlFront", logicUnit, false, 0);
 
-    // 6. PETG (10mm, 전/후/측면 전체)
-    auto logicPetgSide = new G4LogicalVolume(new G4Tubs("PetgSide", r_al, r_petg, 16.2*mm, 0, 360*deg), petg, "PetgSide");
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0, 1.4*mm), logicPetgSide, "PhysPetgSide", logicUnit, false, 0);
+    auto logicAlSide = new G4LogicalVolume(new G4Tubs("AlSide", r_tyvek, r_al, 14.6*mm, 0, 360*deg), al, "AlSide");
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0, -0.1*mm), logicAlSide, "PhysAlSide", logicUnit, false, 0);
 
     auto logicPetgFront = new G4LogicalVolume(new G4Tubs("PetgFront", 0, r_petg, 5.0*mm, 0, 360*deg), petg, "PetgFront");
+    logicPetgFront->SetVisAttributes(new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.8)));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0,-19.8*mm), logicPetgFront, "PhysPetgFront", logicUnit, false, 0);
 
     auto logicPetgBack = new G4LogicalVolume(new G4Tubs("PetgBack", 0, r_petg, 1.2*mm, 0, 360*deg), petg, "PetgBack");
+    logicPetgBack->SetVisAttributes(new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.8)));
     new G4PVPlacement(nullptr, G4ThreeVector(0,0, 18.8*mm), logicPetgBack, "PhysPetgBack", logicUnit, false, 0);
 
-    // 7. Pb (5mm, 오직 측면만!)
+    auto logicPetgSide = new G4LogicalVolume(new G4Tubs("PetgSide", r_al, r_petg, 16.2*mm, 0, 360*deg), petg, "PetgSide");
+    logicPetgSide->SetVisAttributes(new G4VisAttributes(G4Colour(0.2, 0.2, 0.2, 0.5)));
+    new G4PVPlacement(nullptr, G4ThreeVector(0,0, 1.4*mm), logicPetgSide, "PhysPetgSide", logicUnit, false, 0);
+
     auto logicPbSide = new G4LogicalVolume(new G4Tubs("PbSide", r_petg, r_pb, 22.4*mm, 0, 360*deg), pb, "PbSide");
-    G4VisAttributes* visPb = new G4VisAttributes(G4Colour(0.4, 0.4, 0.4, 0.5));
+    G4VisAttributes* visPb = new G4VisAttributes(G4Colour(0.4, 0.4, 0.4, 0.5)); 
     visPb->SetForceWireframe(true);
     logicPbSide->SetVisAttributes(visPb);
     new G4PVPlacement(nullptr, G4ThreeVector(0,0,-2.4*mm), logicPbSide, "PhysPbSide", logicUnit, false, 0);
 
-    // 광학 표면 등록
+    //타이벡 반사율 및 PMT 양자효율 벡터 지정
     std::vector<G4double> rfl = {0.98, 0.98, 0.98, 0.98, 0.98};
     auto tyvekSurf = new G4OpticalSurface("TyvekSurf", unified, groundfrontpainted, dielectric_dielectric);
-    G4MaterialPropertiesTable* mptTyvek = new G4MaterialPropertiesTable();
-    mptTyvek->AddProperty("REFLECTIVITY", optEn, rfl);
-    tyvekSurf->SetMaterialPropertiesTable(mptTyvek);
-    new G4LogicalSkinSurface("TyvekSkinSide", logicTyvekSide, tyvekSurf);
-    new G4LogicalSkinSurface("TyvekSkinFront", logicTyvekFront, tyvekSurf);
+    G4MaterialPropertiesTable* mptTyvekSurf = new G4MaterialPropertiesTable();
+    mptTyvekSurf->AddProperty("REFLECTIVITY", optEn, rfl); 
+    tyvekSurf->SetMaterialPropertiesTable(mptTyvekSurf);
+    
+    new G4LogicalSkinSurface("TyvekSideSkin", logicTyvekSide, tyvekSurf);
+    new G4LogicalSkinSurface("TyvekFrontSkin", logicTyvekFront, tyvekSurf);
+
+    std::vector<G4double> eff = {0.25, 0.25, 0.25, 0.25, 0.25};
+    std::vector<G4double> pmtRfl = {0.0, 0.0, 0.0, 0.0, 0.0};
+    auto pmtSurf = new G4OpticalSurface("CathodeSurf", glisur, polished, dielectric_metal);
+    G4MaterialPropertiesTable* mptPMT = new G4MaterialPropertiesTable();
+    mptPMT->AddProperty("EFFICIENCY", optEn, eff); 
+    mptPMT->AddProperty("REFLECTIVITY", optEn, pmtRfl);
+    pmtSurf->SetMaterialPropertiesTable(mptPMT);
+    new G4LogicalSkinSurface("CathodeSkin", logicCat, pmtSurf);
 
     fLogicPhotocathode = logicCat;
     return logicUnit;
