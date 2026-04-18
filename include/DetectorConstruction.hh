@@ -7,7 +7,6 @@
 class G4VPhysicalVolume;
 class G4LogicalVolume;
 class G4GenericMessenger;
-class G4Tubs;
 
 class DetectorConstruction : public G4VUserDetectorConstruction {
 public:
@@ -17,48 +16,22 @@ public:
     G4VPhysicalVolume* Construct() override;
     void ConstructSDandField() override;
 
-    // --- Dynamic Geometry Control ---
+    // 매크로 제어용 함수
     void SetMovablePMTAngle(G4double angle);
-    void SetDetectorDistance(G4double dist);
-    void SetDetectorBaseRadius(G4double radius);
+    void SetFrontDistance(G4double dist);
 
 private:
-    void UpdateMovableDetectorPosition();
-    void UpdateDetectorSize();
+    void UpdateDetectorPosition();
     G4LogicalVolume* ConstructDetectorUnit();
 
     G4GenericMessenger* fMessenger;
     
     G4double fMovablePMTAngle;
-    G4double fDetectorDistance;
-    G4double fBaseRadius;
+    G4double fFrontDistance; // ★ 선원 ~ 전면부 표면 거리
 
     G4LogicalVolume* fLogicPhotocathode;
     
-    // 배치 포인터 (대칭 이동용)
     G4VPhysicalVolume* fFixedPhys;
     G4VPhysicalVolume* fMovablePhys;
     G4RotationMatrix* fMovableRot;
-
-    // 솔리드 포인터 (동적 크기 연쇄 조절용)
-    G4Tubs* fSolidLS;
-    G4Tubs* fSolidDuranBack;
-    G4Tubs* fSolidGrease;
-    G4Tubs* fSolidWin;
-    G4Tubs* fSolidCat;
-    
-    G4Tubs* fSolidDuranSide;
-    G4Tubs* fSolidDuranFront;
-    
-    G4Tubs* fSolidTyvekSide;
-    G4Tubs* fSolidTyvekFront;
-    
-    G4Tubs* fSolidAlSide;
-    G4Tubs* fSolidAlFront;
-    
-    G4Tubs* fSolidPetgSide;
-    G4Tubs* fSolidPetgFront;
-    G4Tubs* fSolidPetgBack;
-    
-    G4Tubs* fSolidPbSide;
 };
